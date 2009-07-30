@@ -144,6 +144,37 @@ describe Feedzirra::FeedUtilities do
         @feed.entries.should include(@new_entry)
         @feed.entries.should include(@old_entry)
       end
+
+      it "should not have any new entries if feed is not updated" do
+        @feed.last_modified.should == @old_entry.published
+        @feed.should_not be_updated
+
+        @feed.update_from_feed(@updated_feed)
+        @feed.should have_new_entries
+        @feed.new_entries.should == [@new_entry]
+        @feed.entries.should == [@new_entry, @old_entry]
+        @feed.should be_updated
+
+        @feed.update_from_feed(@updated_feed)
+        @feed.entries.should == [@new_entry, @old_entry]
+        @feed.should_not have_new_entries
+        @feed.new_entries.should == []
+        @feed.should_not be_updated
+        @feed.last_modified.should == @new_entry.published
+        
+        # let's make another blog post
+        newer_entry = Feedzirra::Parser::AtomEntry.new
+        newer_entry.url = "http://pauldix.net/newer.html"
+        newer_entry.published = (Time.now + 20).to_s  
+        @updated_feed.entries.unshift newer_entry
+        @updated_feed.last_modified = newer_entry.published
+
+        @feed.update_from_feed(@updated_feed)
+        @feed.entries.should == [newer_entry, @new_entry, @old_entry]
+        @feed.new_entries.should == [newer_entry]
+        @feed.last_modified.should == newer_entry.published
+        @feed.should be_updated
+      end
     end
   end
 end
